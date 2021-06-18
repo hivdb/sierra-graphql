@@ -1,9 +1,11 @@
 plugins {
-    id 'java'
-    id 'eclipse'
-    id 'war'
+    id "org.gradle.java"
+    id "org.gradle.jacoco"
+    id "org.gradle.eclipse"
+    id "com.scuilion.syntastic" version "0.3.6"
 }
 
+group = 'edu.stanford.hivdb'
 version = '3.1.0a1'
 
 sourceCompatibility = 1.8
