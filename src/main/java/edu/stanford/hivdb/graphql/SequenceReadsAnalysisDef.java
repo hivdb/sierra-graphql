@@ -122,7 +122,7 @@ public class SequenceReadsAnalysisDef {
 			strain,
 			allReads,
 			untransRegions,
-			(Double) input.get("maxMixturePcnt"),
+			(Double) input.get("maxMixtureRate"),
 			(Double) input.get("minPrevalence"),
 			(Long) input.get("minCodonReads"),
 			(Long) input.get("minPositionReads")
@@ -175,7 +175,7 @@ public class SequenceReadsAnalysisDef {
 				.description("Optional consensus information of untranslated regions to be added in assembled consensus sequence."))
 			.field(field -> field
 				.type(GraphQLFloat)
-				.name("maxMixturePcnt")
+				.name("maxMixtureRate")
 				.defaultValue(1.)
 				.description(
 					"The maximum allowed mixture percentage cutoff. " +
@@ -372,13 +372,13 @@ public class SequenceReadsAnalysisDef {
 						"The best matching subtype."))
 				.field(field -> field
 					.type(GraphQLFloat)
-					.name("maxMixturePcnt")
+					.name("maxMixtureRate")
 					.description(
 						"Maximum allowed mixture percentage specified by input."
 					))
 				.field(field -> field
 					.type(GraphQLFloat)
-					.name("mixturePcnt")
+					.name("mixtureRate")
 					.description(
 						"Post-filter nucleotide mixture percentage."))
 				.field(field -> newMutationSet(virusName, field, "mutations")

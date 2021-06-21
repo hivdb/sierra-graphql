@@ -247,8 +247,12 @@ public class SequenceAnalysisDef {
 					.field(field -> field
 						.type(GraphQLFloat)
 						.name("mixturePcnt")
+						.deprecate("Use field `mixtureRate` * 100 instead."))
+					.field(field -> field
+						.type(GraphQLFloat)
+						.name("mixtureRate")
 						.description(
-							"Mixture pecentage of the sequence. Notes only RYMWKS " +
+							"Mixture rate of the sequence. Notes only RYMWKS " +
 							"are counted."))
 					.field(field -> newMutationSet(virusName, field, "mutations")
 						.description("All mutations found in the aligned sequence."))

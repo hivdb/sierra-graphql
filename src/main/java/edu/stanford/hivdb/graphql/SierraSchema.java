@@ -30,6 +30,7 @@ import static graphql.schema.FieldCoordinates.coordinates;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,7 @@ import static edu.stanford.hivdb.graphql.PositionCodonReadsDef.*;
 public class SierraSchema {
 
 	private static int MAXIMUM_SEQUENCES_PER_PAYLOAD;
+	private static Map<Virus<?>, GraphQLSchema> schemaSingletons = new HashMap<>();
 
 	static {
 		String maxSeqs = System.getenv("MAXIMUM_SEQUENCES_PER_PAYLOAD");
@@ -344,9 +346,15 @@ public class SierraSchema {
 	}
 	
 	public static <T extends Virus<T>> GraphQLSchema makeSchema(T virusIns) {
-		return GraphQLSchema.newSchema()
-			.query(oRoot.get(virusIns.getName()))
-			.codeRegistry(makeCodeRegistry(virusIns))
-			.build();
+		if (!schemaSingletons.containsKey(virusIns)) {
+			schemaSingletons.put(
+				virusIns,
+				GraphQLSchema.newSchema()
+					.query(oRoot.get(virusIns.getName()))
+					.codeRegistry(makeCodeRegistry(virusIns))
+					.build()
+			);
+		}
+		return schemaSingletons.get(virusIns);
 	}
 }
