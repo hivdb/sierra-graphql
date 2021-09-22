@@ -40,10 +40,10 @@ import edu.stanford.hivdb.mutations.PositionCodonReads;
 import edu.stanford.hivdb.seqreads.GeneSequenceReads;
 import edu.stanford.hivdb.seqreads.OneCodonReadsCoverage;
 import edu.stanford.hivdb.seqreads.SequenceReads;
-import edu.stanford.hivdb.seqreads.UntranslatedRegion;
 import edu.stanford.hivdb.utilities.Json;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Strain;
+import edu.stanford.hivdb.viruses.UntranslatedRegion;
 import edu.stanford.hivdb.viruses.Virus;
 
 import static edu.stanford.hivdb.graphql.MutationSetDef.*;
