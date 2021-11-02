@@ -37,6 +37,7 @@ import edu.stanford.hivdb.drugresistance.algorithm.DrugResistanceAlgorithm;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
 import edu.stanford.hivdb.genotypes.GenotypeResult;
 import edu.stanford.hivdb.mutations.PositionCodonReads;
+import edu.stanford.hivdb.seqreads.CutoffCalculator.CutoffKeyPoint;
 import edu.stanford.hivdb.seqreads.GeneSequenceReads;
 import edu.stanford.hivdb.seqreads.OneCodonReadsCoverage;
 import edu.stanford.hivdb.seqreads.SequenceReads;
@@ -249,6 +250,53 @@ public class SequenceReadsAnalysisDef {
 		)
 	);
 	
+	private static DataFetcher<Boolean> isAboveMixtureRateThresholdFetcher = env -> {
+		CutoffKeyPoint cutoff = env.getSource();
+		return cutoff.isAboveMixtureRateThreshold();
+	};
+	
+	private static DataFetcher<Boolean> isBelowMinPrevalenceThresholdFetcher = env -> {
+		CutoffKeyPoint cutoff = env.getSource();
+		return cutoff.isBelowMinPrevalenceThreshold();
+	};
+	
+	private static GraphQLCodeRegistry cutoffKeyPointCodRegistry = newCodeRegistry()
+		.dataFetcher(
+			coordinates("CutoffKeyPoint", "isAboveMixtureRateThreshold"),
+			isAboveMixtureRateThresholdFetcher
+		)
+		.dataFetcher(
+			coordinates("CutoffKeyPoint", "isBelowMinPrevalenceThreshold"),
+			isBelowMinPrevalenceThresholdFetcher
+		)
+		.build();
+
+	private static GraphQLObjectType oCutoffKeyPoint = newObject()
+		.name("CutoffKeyPoint")
+		.description("Related `mixtureRate` and `minPrevalence`.")
+		.field(field -> field
+			.name("mixtureRate")
+			.type(GraphQLFloat)
+			.description("Mixture rate of all included NAs")
+		)
+		.field(field -> field
+			.name("minPrevalence")
+			.type(GraphQLFloat)
+			.description("Minimal prevalence of all included codons")
+		)
+		.field(field -> field
+			.name("isAboveMixtureRateThreshold")
+			.type(GraphQLBoolean)
+			.description("Is current `mixtureRate` above the input threshold `maxMixtureRate`?")
+		)
+		.field(field -> field
+			.name("isBelowMinPrevalenceThreshold")
+			.type(GraphQLBoolean)
+			.description("Is current `minPrevalence` below the input argument `minPrevalence`?")
+		)
+		.build();
+
+	
 	private static DataFetcher<String> internalJsonCodonReadsCoverageDataFetcher = env -> {
 		SequenceReads<?> sr = env.getSource();
 		return Json.dumpsUgly(
@@ -258,8 +306,7 @@ public class SequenceReadsAnalysisDef {
 			.map(rc -> rc.extMap())
 			.collect(Collectors.toList()));
 	};
-
-
+	
 	public static <VirusT extends Virus<VirusT>> GraphQLCodeRegistry makeSequenceReadsCodeRegistry(VirusT virusIns) {
 		return (
 			newCodeRegistry()
@@ -288,6 +335,7 @@ public class SequenceReadsAnalysisDef {
 				newMutationSetDataFetcher(virusIns, "mutations")
 			)
 			.dataFetchers(oneCodonReadsCoverageCodeRegistry)
+			.dataFetchers(cutoffKeyPointCodRegistry)
 			.dataFetchers(makeGeneSequenceReadsCodeRegistry(virusIns))
 			.build()
 		);
@@ -414,6 +462,14 @@ public class SequenceReadsAnalysisDef {
 					.name("internalJsonCodonReadsCoverage")
 					.description(
 						"Position codon reads in this gene sequence (json formated)."))
+				.field(field -> field
+					.type(new GraphQLList(oCutoffKeyPoint))
+					.name("cutoffKeyPoints")
+					.description(
+						"Cutoff key points showing the interaction between and the " +
+						"effection of different configuration of the cutoff arguments " +
+						"`maxMixtureRate` and `minPrevalence`.")
+				)
 			  .field(field -> field
 			  	.type(GraphQLString)
 			  	.name("assembledConsensus")
