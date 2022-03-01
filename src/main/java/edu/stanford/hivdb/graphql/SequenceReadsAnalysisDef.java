@@ -474,7 +474,12 @@ public class SequenceReadsAnalysisDef {
 			  	.type(GraphQLString)
 			  	.name("assembledConsensus")
 			  	.description(
-			  		"Unaligned sequence consensus assembled from codon reads and untranslated regions."));
+			  		"Unaligned sequence consensus assembled from codon reads and untranslated regions. Ambiguous nucleotides are included."))
+			  .field(field -> field
+			  	.type(GraphQLString)
+			  	.name("assembledUnambiguousConsensus")
+			  	.description(
+			  		"Unaligned sequence consensus assembled from codon reads and untranslated regions. Only unambiguous nucleotides are included."));
 			  
 			Virus<?> virus = Virus.getInstance(virusName);
 			builder = virus.getVirusGraphQLExtension().extendObjectBuilder("SequenceReadsAnalysis", builder);
