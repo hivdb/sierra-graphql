@@ -257,6 +257,14 @@ public class SequenceAnalysisDef {
 					.field(field -> newMutationSet(virusName, field, "mutations")
 						.description("All mutations found in the aligned sequence."))
 					.field(field -> field
+						.type(GraphQLInt)
+						.name("mutationCount")
+						.description("Number of mutations without counting unsequenced regions and multiple continuous deletions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("unusualMutationCount")
+						.description("Number of unusual mutations without counting unsequenced regions and multiple continuous deletions"))
+					.field(field -> field
 						.type(new GraphQLList(oFrameShift.get(virusName)))
 						.name("frameShifts")
 						.description("All frame shifts found in the aligned sequence."))

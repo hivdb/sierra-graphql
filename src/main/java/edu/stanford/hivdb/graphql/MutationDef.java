@@ -148,6 +148,11 @@ public class MutationDef {
 				.description(
 					"The mutated AA(s) with possibly inserted AA(s). Highly ambiguous mixture is not replaced to X."))
 			.field(field -> field
+				.type(GraphQLString)
+				.name("unusualAAs")
+				.description(
+					"The unusual AA(s)."))
+			.field(field -> field
 				.type(new GraphQLList(GraphQLString))
 				.name("displayAAChars")
 				.description("A list of AAs."))
