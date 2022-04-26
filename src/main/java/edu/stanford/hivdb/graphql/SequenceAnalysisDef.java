@@ -25,6 +25,7 @@ import static graphql.schema.GraphQLObjectType.newObject;
 import static graphql.schema.GraphQLCodeRegistry.newCodeRegistry;
 import static graphql.schema.FieldCoordinates.coordinates;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.stanford.hivdb.drugresistance.GeneDR;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
@@ -41,6 +43,7 @@ import edu.stanford.hivdb.mutations.MutationSet;
 import edu.stanford.hivdb.sequences.AlignedGeneSeq;
 import edu.stanford.hivdb.sequences.AlignedSequence;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
+import edu.stanford.hivdb.utilities.ValidationResult;
 import edu.stanford.hivdb.viruses.Virus;
 
 import static edu.stanford.hivdb.graphql.UnalignedSequenceDef.*;
@@ -99,11 +102,28 @@ public class SequenceAnalysisDef {
 		};
 	};
 
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<ValidationResult>> makeValidationResultsDataFetcher(VirusT virusIns) {
+		return env -> {
+			AlignedSequence<VirusT> alignedSeq = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return alignedSeq.getValidationResults(Sets.newLinkedHashSet(includeGenes));
+		};
+	}
+	
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<AlignedGeneSeq<VirusT>>> makeAlignedGeneSequencesDataFetcher(VirusT virusIns) {
+		return env -> {
+			AlignedSequence<VirusT> alignedSeq = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return alignedSeq.getAlignedGeneSequences(Sets.newLinkedHashSet(includeGenes));
+		};
+	}
+
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<GeneDR<VirusT>>> makeDrugResistanceDataFetcher(VirusT virusIns) {
 		return env -> {
 			AlignedSequence<VirusT> alignedSeq = env.getSource();
 			String algName = env.getArgument("algorithm");
-			List<AlignedGeneSeq<VirusT>> geneSeqs = alignedSeq.getAlignedGeneSequences();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			List<AlignedGeneSeq<VirusT>> geneSeqs = alignedSeq.getAlignedGeneSequences(Sets.newLinkedHashSet(includeGenes));
 			return Lists.newArrayList(
 				GeneDR.newFromAlignedGeneSeqs(
 					geneSeqs, virusIns.getDrugResistAlgorithm(algName)
@@ -159,6 +179,14 @@ public class SequenceAnalysisDef {
 				makeSubtypesDataFetcherV2(virusIns)
 			)
 			.dataFetcher(
+				coordinates("SequenceAnalysis", "validationResults"),
+				makeValidationResultsDataFetcher(virusIns)
+			)
+			.dataFetcher(
+				coordinates("SequenceAnalysis", "alignedGeneSequences"),
+				makeAlignedGeneSequencesDataFetcher(virusIns)
+			)
+			.dataFetcher(
 				coordinates("SequenceAnalysis", "drugResistance"),
 				makeDrugResistanceDataFetcher(virusIns)
 			)
@@ -201,10 +229,22 @@ public class SequenceAnalysisDef {
 					.field(field -> field
 						.type(new GraphQLList(oValidationResult))
 						.name("validationResults")
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.description("Genes to be included in the results")
+						)
 						.description("Validation results for this sequence."))
 					.field(field -> field
 						.type(new GraphQLList(oAlignedGeneSequence.get(virusName)))
 						.name("alignedGeneSequences")
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.description("Genes to be included in the results")
+						)
 						.description("List of aligned sequence distinguished by genes."))
 					.field(field -> field
 						.type(new GraphQLList(oBoundSubtypeV2))
@@ -227,13 +267,13 @@ public class SequenceAnalysisDef {
 					.field(field -> field
 						.type(new GraphQLList(oBoundSubtypeV2))
 						.name("genotypes")
-						.argument(newArgument()
+						.argument(arg -> arg
 							.type(GraphQLInt)
 							.name("first")
 							.defaultValue(2)
 							.description(
 								"Fetch only the first nth closest genotypes. Default to 2.")
-							.build())
+						)
 						.deprecate("Use field `subtypesV2` instead.")
 						.description(
 							"List of virus groups or subtypes, or species. " +
@@ -275,7 +315,14 @@ public class SequenceAnalysisDef {
 							.name("algorithm")
 							.type(oASIAlgorithm.get(virusName))
 							.defaultValue(Virus.getInstance(virusName).getDefaultDrugResistAlgorithm().getName())
-							.description("One of the built-in ASI algorithms."))
+							.description("One of the built-in ASI algorithms.")
+						)
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.description("Genes to be included in the results")
+						)
 						.description("List of drug resistance results by genes."))
 					.field(field -> field
 						.type(new GraphQLList(oBoundMutationPrevalence.get(virusName)))
