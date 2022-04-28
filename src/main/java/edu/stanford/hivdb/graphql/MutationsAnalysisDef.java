@@ -24,6 +24,7 @@ import static graphql.schema.GraphQLObjectType.newObject;
 import static graphql.schema.GraphQLCodeRegistry.newCodeRegistry;
 import static graphql.schema.FieldCoordinates.coordinates;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +33,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Triple;
+
+import com.google.common.collect.Sets;
 
 import edu.stanford.hivdb.drugresistance.GeneDR;
 import edu.stanford.hivdb.viruses.Gene;
@@ -71,7 +74,8 @@ public class MutationsAnalysisDef {
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<ValidationResult>> makeMutValidationResultDataFetcher(VirusT virusIns) {
 		return env -> {
 			MutationSet<VirusT> mutations = getMutationSetFromSource(env);
-			return virusIns.validateMutations(mutations);
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return virusIns.validateMutations(mutations, Sets.newLinkedHashSet(includeGenes));
 		};
 	};
 
@@ -81,28 +85,34 @@ public class MutationsAnalysisDef {
 	};
 	
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeMutAllGeneMutSetDataFetcher(VirusT virusIns) {
-		return env -> (
-			getMutationsByGeneFromSource(env)
-			.entrySet()
-			.stream()
-			.map(entry -> Map.of(
-				"gene", (Object) entry.getKey(),
-				"mutations", (Object) entry.getValue()
-			))
-			.collect(Collectors.toList())
-		);
+		return env -> {
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			Set<String> includeGeneSet = Sets.newHashSet(includeGenes);
+			return getMutationsByGeneFromSource(env)
+				.entrySet()
+				.stream()
+				.map(entry -> Map.of(
+					"gene", (Object) entry.getKey(),
+					"mutations", (Object) entry.getValue()
+				))
+				.filter(map -> includeGeneSet.contains(((Gene<?>) map.get("gene")).getAbstractGene()))
+				.collect(Collectors.toList());
+		};
 	}
 
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<GeneDR<VirusT>>> makeMutDRDataFetcher(VirusT virusIns) {
 		return env -> {
 			Map<Gene<VirusT>, MutationSet<VirusT>> mutationsByGene = getMutationsByGeneFromSource(env);
 			String algName = env.getArgument("algorithm");
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			Set<String> includeGeneSet = Sets.newHashSet(includeGenes);
 			return mutationsByGene
 				.entrySet()
 				.stream()
 				.map(e -> new GeneDR<>(
 					e.getKey(), e.getValue(), virusIns.getDrugResistAlgorithm(algName)
 				))
+				.filter(geneDR -> includeGeneSet.contains(geneDR.getAbstractGene()))
 				.collect(Collectors.toList());
 		};
 	};
@@ -194,10 +204,22 @@ public class MutationsAnalysisDef {
 			.field(field -> field
 				.type(new GraphQLList(oValidationResult))
 				.name("validationResults")
+				.argument(arg -> arg
+					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.name("includeGenes")
+					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.description("Genes to be included in the results")
+				)
 				.description("Validation results for the mutation list."))
 			.field(field -> field
 				.type(new GraphQLList(oGeneMutations.get(name)))
 				.name("allGeneMutations")
+				.argument(arg -> arg
+					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.name("includeGenes")
+					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.description("Genes to be included in the results")
+				)
 				.description("Mutations groupped by gene."))
 			.field(field -> field
 				.type(new GraphQLList(oDrugResistance.get(name)))
@@ -207,6 +229,12 @@ public class MutationsAnalysisDef {
 					.type(oASIAlgorithm.get(name))
 					.defaultValue(Virus.getInstance(name).getDefaultDrugResistAlgorithm().getName())
 					.description("One of the built-in ASI algorithms."))
+				.argument(arg -> arg
+					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.name("includeGenes")
+					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.description("Genes to be included in the results")
+				)
 				.description("List of drug resistance results by genes."))
 			.field(field -> field
 				.type(new GraphQLList(oBoundMutationPrevalence.get(name)))
