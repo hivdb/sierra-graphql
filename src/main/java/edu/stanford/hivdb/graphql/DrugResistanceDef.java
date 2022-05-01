@@ -84,25 +84,33 @@ public class DrugResistanceDef {
 					Map<String, Object> map = new HashMap<>();
 					map.put("drug", drug);
 					map.put("drugClass", drugClass);
-					map.put("SIR", drugSusc.getSIR());
-					map.put("score", drugSusc.getScore());
-					map.put("level", drugSusc.getLevel());
-					map.put("text", drugSusc.getLevelText());
 					List<Map<String, Object>> partialScores = new ArrayList<>();
-     
-					for (Pair<MutationSet<VirusT>, Double> pair : drugSusc.getParialScorePairs()) {
-						Map<String, Object> partialScore = new LinkedHashMap<>();
-						partialScore.put("mutations", pair.getLeft());
-						partialScore.put("score", pair.getRight());
-						partialScores.add(partialScore);
+					if (drugSusc == null) {
+						map.put("SIR", SIREnum.U);
+						map.put("score", .0);
+						map.put("level", 0);
+						map.put("text", "Undetermined");
 					}
-					/*partialScores.sort((ps1, ps2) -> {
-						@SuppressWarnings("unchecked")
-						MutationSet<VirusT> mutsLeft = (MutationSet<VirusT>) ps1.get("mutations");
-						@SuppressWarnings("unchecked")
-						MutationSet<VirusT> mutsRight = (MutationSet<VirusT>) ps2.get("mutations");
-						return mutsLeft.compareTo(mutsRight);
-					});*/
+					else {
+						map.put("SIR", drugSusc.getSIR());
+						map.put("score", drugSusc.getScore());
+						map.put("level", drugSusc.getLevel());
+						map.put("text", drugSusc.getLevelText());
+						for (Pair<MutationSet<VirusT>, Double> pair : drugSusc.getParialScorePairs()) {
+							Map<String, Object> partialScore = new LinkedHashMap<>();
+							partialScore.put("mutations", pair.getLeft());
+							partialScore.put("score", pair.getRight());
+							partialScores.add(partialScore);
+						}
+						/*partialScores.sort((ps1, ps2) -> {
+							@SuppressWarnings("unchecked")
+							MutationSet<VirusT> mutsLeft = (MutationSet<VirusT>) ps1.get("mutations");
+							@SuppressWarnings("unchecked")
+							MutationSet<VirusT> mutsRight = (MutationSet<VirusT>) ps2.get("mutations");
+							return mutsLeft.compareTo(mutsRight);
+						});*/
+					}
+     
 					map.put("partialScores", partialScores);
 					results.add(map);
 				}
