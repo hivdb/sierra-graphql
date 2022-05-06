@@ -26,7 +26,7 @@ import static graphql.schema.FieldCoordinates.coordinates;
 
 import edu.stanford.hivdb.mutations.Mutation;
 import edu.stanford.hivdb.mutations.MutationType;
-import edu.stanford.hivdb.sequences.UnsequencedRegions;
+import edu.stanford.hivdb.sequences.GeneRegions;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
@@ -45,7 +45,7 @@ public class MutationDef {
 		Mutation<T> mutation = env.getSource();
 		Gene<T> gene = mutation.getGene();
 		Object src = env.getLocalContext();
-		UnsequencedRegions<T> unseqRegions = UnsequencedRegionsDef.getUnsequencedRegionsFromSource(src, gene);
+		GeneRegions<T> unseqRegions = UnsequencedRegionsDef.getUnsequencedRegionsFromSource(src, gene);
 		if (unseqRegions == null) {
 			return mutation.isUnsequenced();
 		}

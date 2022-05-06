@@ -27,13 +27,15 @@ import static graphql.schema.GraphQLCodeRegistry.newCodeRegistry;
 import static graphql.schema.FieldCoordinates.coordinates;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Sets;
+
 import edu.stanford.hivdb.drugresistance.GeneDR;
-import edu.stanford.hivdb.drugresistance.algorithm.DrugResistanceAlgorithm;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
 import edu.stanford.hivdb.genotypes.GenotypeResult;
 import edu.stanford.hivdb.mutations.PositionCodonReads;
@@ -43,6 +45,7 @@ import edu.stanford.hivdb.seqreads.OneCodonReadsCoverage;
 import edu.stanford.hivdb.seqreads.SequenceReads;
 import edu.stanford.hivdb.utilities.Json;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
+import edu.stanford.hivdb.utilities.ValidationResult;
 import edu.stanford.hivdb.viruses.Strain;
 import edu.stanford.hivdb.viruses.UntranslatedRegion;
 import edu.stanford.hivdb.viruses.Virus;
@@ -76,15 +79,55 @@ public class SequenceReadsAnalysisDef {
 		};
 	};
 
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<ValidationResult>> makeValidationResultsDataFetcher(VirusT virusIns) {
+		return env -> {
+			SequenceReads<VirusT> seqReads = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return seqReads.getValidationResults(Sets.newLinkedHashSet(includeGenes));
+		};
+	}
+
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<GeneSequenceReads<VirusT>>> makeAllGeneSequenceReadsDataFetcher(VirusT virusIns) {
+		return env -> {
+			SequenceReads<VirusT> seqReads = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return seqReads.getAllGeneSequenceReads(Sets.newLinkedHashSet(includeGenes));
+		};
+	}
+
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<GeneDR<VirusT>>> makeDrugResistanceDataFetcher(VirusT virusIns) {
 		return env -> {
 			SequenceReads<VirusT> seqReads = env.getSource();
 			String algName = env.getArgument("algorithm");
-			DrugResistanceAlgorithm<VirusT> alg = virusIns.getDrugResistAlgorithm(algName);
-			List<GeneSequenceReads<VirusT>> allGeneSeqReads = seqReads.getAllGeneSequenceReads();
-			return new ArrayList<>(GeneDR.newFromGeneSequenceReads(allGeneSeqReads, alg).values());
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			List<GeneSequenceReads<VirusT>> allGeneSeqReads = seqReads.getAllGeneSequenceReads(Sets.newLinkedHashSet(includeGenes));
+			return new ArrayList<>(GeneDR.newFromGeneSequenceReads(
+				allGeneSeqReads,
+				virusIns.getDrugResistAlgorithm(algName)
+			).values());
 		};
 	};
+
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<OneCodonReadsCoverage<VirusT>>> makeCodonReadsCoverageDataFetcher(VirusT virusIns) {
+		return env -> {
+			SequenceReads<VirusT> sr = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			return sr.getCodonReadsCoverage(includeGenes);
+		};
+	};
+	
+
+	private static DataFetcher<String> internalJsonCodonReadsCoverageDataFetcher = env -> {
+		SequenceReads<?> sr = env.getSource();
+		Collection<String> includeGenes = env.getArgument("includeGenes");
+		return Json.dumpsUgly(
+			sr
+			.getCodonReadsCoverage(includeGenes)
+			.stream()
+			.map(rc -> rc.extMap())
+			.collect(Collectors.toList()));
+	};
+	
 	
 	public static <VirusT extends Virus<VirusT>> SequenceReads<VirusT> toSequenceReadsList(Map<String, Object> input) {
 		String name = (String) input.get("name");
@@ -297,16 +340,6 @@ public class SequenceReadsAnalysisDef {
 		.build();
 
 	
-	private static DataFetcher<String> internalJsonCodonReadsCoverageDataFetcher = env -> {
-		SequenceReads<?> sr = env.getSource();
-		return Json.dumpsUgly(
-			sr
-			.getCodonReadsCoverage()
-			.stream()
-			.map(rc -> rc.extMap())
-			.collect(Collectors.toList()));
-	};
-	
 	public static <VirusT extends Virus<VirusT>> GraphQLCodeRegistry makeSequenceReadsCodeRegistry(VirusT virusIns) {
 		return (
 			newCodeRegistry()
@@ -315,8 +348,20 @@ public class SequenceReadsAnalysisDef {
 				makeSubtypesDataFetcher(virusIns)
 			)
 			.dataFetcher(
+				coordinates("SequenceReadsAnalysis", "validationResults"),
+				makeValidationResultsDataFetcher(virusIns)
+			)
+			.dataFetcher(
+				coordinates("SequenceReadsAnalysis", "allGeneSequenceReads"),
+				makeAllGeneSequenceReadsDataFetcher(virusIns)
+			)
+			.dataFetcher(
 				coordinates("SequenceReadsAnalysis", "drugResistance"),
 				makeDrugResistanceDataFetcher(virusIns)
+			)
+			.dataFetcher(
+				coordinates("SequenceReadsAnalysis", "codonReadsCoverage"),
+				makeCodonReadsCoverageDataFetcher(virusIns)
 			)
 			.dataFetcher(
 				coordinates("SequenceReadsAnalysis", "internalJsonCodonReadsCoverage"),
@@ -368,6 +413,12 @@ public class SequenceReadsAnalysisDef {
 				.field(field -> field
 					.type(new GraphQLList(oValidationResult))
 					.name("validationResults")
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
 					.description("Validation results for the sequence reads."))
 				.field(field -> field
 					.type(GraphQLFloat)
@@ -400,6 +451,12 @@ public class SequenceReadsAnalysisDef {
 				.field(field -> field
 					.type(new GraphQLList(oGeneSequenceReads.get(virusName)))
 					.name("allGeneSequenceReads")
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
 					.description("List of sequence reads distinguished by genes."))
 				.field(field -> field
 					.type(new GraphQLList(oBoundSubtypeV2))
@@ -447,6 +504,12 @@ public class SequenceReadsAnalysisDef {
 						.type(oASIAlgorithm.get(virusName))
 						.defaultValue(Virus.getInstance(virusName).getDefaultDrugResistAlgorithm().getName())
 						.description("One of the built-in ASI algorithms."))
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
 					.description("List of drug resistance results by genes."))
 				.field(oSeqReadsHistogramBuilder)
 				.field(oSeqReadsHistogramByCodonReadsBuilder)
@@ -463,11 +526,23 @@ public class SequenceReadsAnalysisDef {
 				.field(field -> field
 					.name("codonReadsCoverage")
 					.type(new GraphQLList(oOneCodonReadsCoverage.get(virusName)))
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
 					.description("Codon reads coverage.")
 				)
 				.field(field -> field
 					.type(GraphQLString)
 					.name("internalJsonCodonReadsCoverage")
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
 					.description(
 						"Position codon reads in this gene sequence (json formated)."))
 				.field(field -> field

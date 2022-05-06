@@ -26,7 +26,7 @@ import edu.stanford.hivdb.seqreads.GeneSequenceReads;
 import edu.stanford.hivdb.seqreads.SequenceReads;
 import edu.stanford.hivdb.sequences.AlignedGeneSeq;
 import edu.stanford.hivdb.sequences.AlignedSequence;
-import edu.stanford.hivdb.sequences.UnsequencedRegions;
+import edu.stanford.hivdb.sequences.GeneRegions;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
@@ -77,8 +77,8 @@ public class UnsequencedRegionsDef {
 		)
 	);
 
-	public static <T extends Virus<T>> UnsequencedRegions<T> getUnsequencedRegionsFromSource(Object src, Gene<T> gene) {
-		UnsequencedRegions<T> unseqRegions = null;
+	public static <T extends Virus<T>> GeneRegions<T> getUnsequencedRegionsFromSource(Object src, Gene<T> gene) {
+		GeneRegions<T> unseqRegions = null;
 		if (src instanceof AlignedSequence) {
 			@SuppressWarnings("unchecked")
 			AlignedSequence<T> alignedSeq = (AlignedSequence<T>) src; 
@@ -105,9 +105,9 @@ public class UnsequencedRegionsDef {
 			GeneSequenceReads<T> geneSeq = (GeneSequenceReads<T>) src; 
 			unseqRegions = geneSeq.getUnsequencedRegions();
 		}
-		else if (src instanceof UnsequencedRegions) {
+		else if (src instanceof GeneRegions) {
 			@SuppressWarnings("unchecked")
-			UnsequencedRegions<T> myUnseqRegions = (UnsequencedRegions<T>) src;
+			GeneRegions<T> myUnseqRegions = (GeneRegions<T>) src;
 			unseqRegions = myUnseqRegions;
 		}
 		return unseqRegions;
