@@ -25,11 +25,15 @@ import static graphql.schema.GraphQLCodeRegistry.newCodeRegistry;
 import static graphql.schema.FieldCoordinates.coordinates;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.Sets;
 
 import edu.stanford.hivdb.mutations.Mutation;
 import edu.stanford.hivdb.mutations.MutationSet;
@@ -44,13 +48,15 @@ import static edu.stanford.hivdb.graphql.MutationDef.*;
 public class MutationPrevalenceDef {
 
 	public static List<Map<String, Object>>
-			getBoundMutationPrevalenceList(MutationSet<?> mutations) {
-		return mutations.getPrevalences()
+			getBoundMutationPrevalenceList(MutationSet<?> mutations, Set<String> includeGenes) {
+		return mutations
+			.filterByNoSplit(mut -> includeGenes.contains(mut.getAbstractGene()))
+			.getPrevalences()
 			.entrySet()
 			.stream()
 			.map(e -> {
 				Mutation<?> mainMut = e.getKey();
-				Map<Mutation<?>, Map<String, Object>>	allResults = (
+				Map<Mutation<?>, Map<String, Object>> allResults = (
 					e.getValue()
 					.stream()
 					.collect(Collectors.groupingBy(mp -> mp.getMutation()))
@@ -63,8 +69,7 @@ public class MutationPrevalenceDef {
 							r.put("subtypes", f.getValue());
 							return r;
 						}
-		))
-	);
+					)));
 
 				List<Map<String, Object>> mainResults = new ArrayList<>();
 				for (Mutation<?> singleAA : mainMut.split()) {
@@ -90,8 +95,11 @@ public class MutationPrevalenceDef {
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeSubtypeStatsDataFetcher(VirusT virusIns) {
 		return env -> {
 			String subtype = env.getSource();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			Set<String> includeGeneSet = Sets.newHashSet(includeGenes);
 			return virusIns.getNumPatientsForAAPercents(virusIns.getMainStrain())
 				.entrySet().stream()
+				.filter(e -> includeGeneSet.contains(e.getKey().getAbstractGene()))
 				.map(e -> {
 					Gene<VirusT> gene = e.getKey();
 					Integer[] stat = e.getValue().get(subtype);
@@ -153,6 +161,12 @@ public class MutationPrevalenceDef {
 			.field(field -> field
 				.name("stats")
 				.type(new GraphQLList(oMutationPrevalenceSubtypeStat.get(name)))
+				.argument(arg -> arg
+					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.name("includeGenes")
+					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.description("Genes to be included in the results")
+				)
 				.description("Sbutype statistics by genes."))
 			.build()
 		)

@@ -29,6 +29,7 @@ import static graphql.schema.FieldCoordinates.coordinates;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,6 +39,7 @@ import com.google.common.collect.Sets;
 import edu.stanford.hivdb.drugresistance.GeneDR;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
 import edu.stanford.hivdb.genotypes.GenotypeResult;
+import edu.stanford.hivdb.mutations.MutationSet;
 import edu.stanford.hivdb.mutations.PositionCodonReads;
 import edu.stanford.hivdb.seqreads.CutoffCalculator.CutoffKeyPoint;
 import edu.stanford.hivdb.seqreads.GeneSequenceReads;
@@ -58,6 +60,8 @@ import static edu.stanford.hivdb.graphql.GeneSequenceReadsDef.*;
 import static edu.stanford.hivdb.graphql.DrugResistanceDef.*;
 import static edu.stanford.hivdb.graphql.SubtypeV2Def.*;
 import static edu.stanford.hivdb.graphql.PositionCodonReadsDef.*;
+import static edu.stanford.hivdb.graphql.MutationPrevalenceDef.*;
+import static edu.stanford.hivdb.graphql.AlgorithmComparisonDef.*;
 import static edu.stanford.hivdb.graphql.SequenceReadsHistogramDef.*;
 import static edu.stanford.hivdb.graphql.SequenceReadsHistogramByCodonReadsDef.*;
 import static edu.stanford.hivdb.graphql.DrugResistanceAlgorithmDef.*;
@@ -339,6 +343,38 @@ public class SequenceReadsAnalysisDef {
 		)
 		.build();
 
+	private static DataFetcher<List<Map<String, Object>>> boundMutPrevListDataFetcher = env -> {
+		SequenceReads<?> seqReads = env.getSource();
+		MutationSet<?> mutations = seqReads.getMutations();
+		Collection<String> includeGenes = env.getArgument("includeGenes");
+		return getBoundMutationPrevalenceList(mutations, Sets.newHashSet(includeGenes));
+	};
+
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeMutAlgCmpDataFetcher(VirusT virusIns) {
+		return env -> {
+			List<String> asiAlgs = env.getArgument("algorithms");
+			List<Map<String, String>> customAlgs = env.getArgument("customAlgorithms");
+			if (asiAlgs == null) { asiAlgs = Collections.emptyList(); }
+			if (customAlgs == null) { customAlgs = Collections.emptyList(); }
+			if (asiAlgs.isEmpty() && customAlgs.isEmpty()) {
+				return Collections.emptyList();
+			}
+			asiAlgs = asiAlgs
+				.stream().filter(alg -> alg != null)
+				.collect(Collectors.toList());
+			Map<String, String> customAlgs2 = customAlgs
+				.stream()
+				.filter(map -> map != null)
+				.collect(Collectors.toMap(
+					map -> map.get("name"),
+					map -> map.get("xml"),
+					(x1, x2) -> x2,
+					LinkedHashMap::new
+				));
+			SequenceReads<VirusT> seqReads = env.getSource();
+			return fetchAlgorithmComparisonData(virusIns, seqReads.getMutations(), asiAlgs, customAlgs2);
+		};
+	};
 	
 	public static <VirusT extends Virus<VirusT>> GraphQLCodeRegistry makeSequenceReadsCodeRegistry(VirusT virusIns) {
 		return (
@@ -378,6 +414,14 @@ public class SequenceReadsAnalysisDef {
 			.dataFetcher(
 				coordinates("SequenceReadsAnalysis", "mutations"),
 				newMutationSetDataFetcher(virusIns, "mutations")
+			)
+			.dataFetcher(
+				coordinates("SequenceReadsAnalysis", "mutationPrevalences"),
+				boundMutPrevListDataFetcher
+			)
+			.dataFetcher(
+				coordinates("SequenceReadsAnalysis", "algorithmComparison"),
+				makeMutAlgCmpDataFetcher(virusIns)
 			)
 			.dataFetchers(oneCodonReadsCoverageCodeRegistry)
 			.dataFetchers(cutoffKeyPointCodRegistry)
@@ -551,18 +595,42 @@ public class SequenceReadsAnalysisDef {
 					.description(
 						"Cutoff key points showing the interaction between and the " +
 						"effection of different configuration of the cutoff arguments " +
-						"`maxMixtureRate` and `minPrevalence`.")
+						"`maxMixtureRate` and `minPrevalence`."
+					)
 				)
-			  .field(field -> field
-			  	.type(GraphQLString)
-			  	.name("assembledConsensus")
-			  	.description(
-			  		"Unaligned sequence consensus assembled from codon reads and untranslated regions. Ambiguous nucleotides are included."))
-			  .field(field -> field
-			  	.type(GraphQLString)
-			  	.name("assembledUnambiguousConsensus")
-			  	.description(
-			  		"Unaligned sequence consensus assembled from codon reads and untranslated regions. Only unambiguous nucleotides are included."));
+				.field(field -> field
+					.type(GraphQLString)
+					.name("assembledConsensus")
+					.description(
+						"Unaligned sequence consensus assembled from codon reads and " +
+						"untranslated regions. Ambiguous nucleotides are included."
+					)
+				)
+				.field(field -> field
+					.type(GraphQLString)
+					.name("assembledUnambiguousConsensus")
+					.description(
+						"Unaligned sequence consensus assembled from codon reads and " +
+						"untranslated regions. Only unambiguous nucleotides are included."
+					)
+				)
+				.field(field -> field
+					.type(new GraphQLList(oBoundMutationPrevalence.get(virusName)))
+					.name("mutationPrevalences")
+					.argument(arg -> arg
+						.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+						.name("includeGenes")
+						.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+						.description("Genes to be included in the results")
+					)
+					.description("List of mutation prevalence results.")
+				) 
+				.field(field -> field
+					.type(new GraphQLList(oAlgorithmComparison.get(virusName)))
+					.name("algorithmComparison")
+					.description("List of ASI comparison results.")
+					.argument(aASIAlgorithmArgument.get(virusName))
+					.argument(aASICustomAlgorithmArgument));
 			  
 			Virus<?> virus = Virus.getInstance(virusName);
 			builder = virus.getVirusGraphQLExtension().extendObjectBuilder("SequenceReadsAnalysis", builder);

@@ -117,9 +117,10 @@ public class MutationsAnalysisDef {
 		};
 	};
 	
-	private static DataFetcher<List<Map<String, Object>>> mutMutPrevDataFetcher = env -> {
+	private static DataFetcher<List<Map<String, Object>>> boundMutPrevListDataFetcher = env -> {
 		MutationSet<?> mutations = getMutationSetFromSource(env);
-		return getBoundMutationPrevalenceList(mutations);
+		Collection<String> includeGenes = env.getArgument("includeGenes");
+		return getBoundMutationPrevalenceList(mutations, Sets.newHashSet(includeGenes));
 	};
 	
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeMutAlgCmpDataFetcher(VirusT virusIns) {
@@ -169,7 +170,7 @@ public class MutationsAnalysisDef {
 			)
 			.dataFetcher(
 				coordinates("MutationsAnalysis", "mutationPrevalences"),
-				mutMutPrevDataFetcher
+				boundMutPrevListDataFetcher
 			)
 			.dataFetcher(
 				coordinates("MutationsAnalysis", "algorithmComparison"),
@@ -194,7 +195,7 @@ public class MutationsAnalysisDef {
 	);
 	
 	public static SimpleMemoizer<GraphQLObjectType> oMutationsAnalysis = new SimpleMemoizer<>(
-		name -> {
+		virusName -> {
 			GraphQLObjectType.Builder builder = newObject()
 			.name("MutationsAnalysis")
 			.field(field -> field
@@ -205,48 +206,54 @@ public class MutationsAnalysisDef {
 				.type(new GraphQLList(oValidationResult))
 				.name("validationResults")
 				.argument(arg -> arg
-					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("Validation results for the mutation list."))
 			.field(field -> field
-				.type(new GraphQLList(oGeneMutations.get(name)))
+				.type(new GraphQLList(oGeneMutations.get(virusName)))
 				.name("allGeneMutations")
 				.argument(arg -> arg
-					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("Mutations groupped by gene."))
 			.field(field -> field
-				.type(new GraphQLList(oDrugResistance.get(name)))
+				.type(new GraphQLList(oDrugResistance.get(virusName)))
 				.name("drugResistance")
 				.argument(arg -> arg
 					.name("algorithm")
-					.type(oASIAlgorithm.get(name))
-					.defaultValue(Virus.getInstance(name).getDefaultDrugResistAlgorithm().getName())
+					.type(oASIAlgorithm.get(virusName))
+					.defaultValue(Virus.getInstance(virusName).getDefaultDrugResistAlgorithm().getName())
 					.description("One of the built-in ASI algorithms."))
 				.argument(arg -> arg
-					.type(new GraphQLList(GeneDef.enumGene.get(name)))
+					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("List of drug resistance results by genes."))
 			.field(field -> field
-				.type(new GraphQLList(oBoundMutationPrevalence.get(name)))
+				.type(new GraphQLList(oBoundMutationPrevalence.get(virusName)))
 				.name("mutationPrevalences")
+				.argument(arg -> arg
+					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+					.name("includeGenes")
+					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+					.description("Genes to be included in the results")
+				)
 				.description("List of mutation prevalence results."))
 			.field(field -> field
-				.type(new GraphQLList(oAlgorithmComparison.get(name)))
+				.type(new GraphQLList(oAlgorithmComparison.get(virusName)))
 				.name("algorithmComparison")
 				.description("List of ASI comparison results.")
-				.argument(aASIAlgorithmArgument.get(name))
+				.argument(aASIAlgorithmArgument.get(virusName))
 				.argument(aASICustomAlgorithmArgument));
-			Virus<?> virusIns = Virus.getInstance(name);
+			Virus<?> virusIns = Virus.getInstance(virusName);
 			builder = virusIns.getVirusGraphQLExtension().extendObjectBuilder("MutationsAnalysis", builder);
 			return builder.build();
 		}

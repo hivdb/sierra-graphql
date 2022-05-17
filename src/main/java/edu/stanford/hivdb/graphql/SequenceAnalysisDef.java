@@ -135,7 +135,8 @@ public class SequenceAnalysisDef {
 	private static DataFetcher<List<Map<String, Object>>> boundMutPrevListDataFetcher = env -> {
 		AlignedSequence<?> alignedSeq = env.getSource();
 		MutationSet<?> mutations = alignedSeq.getMutations();
-		return getBoundMutationPrevalenceList(mutations);
+		Collection<String> includeGenes = env.getArgument("includeGenes");
+		return getBoundMutationPrevalenceList(mutations, Sets.newHashSet(includeGenes));
 	};
 	
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeAlgComparisonDataFetcher(VirusT virusIns) {
@@ -327,6 +328,12 @@ public class SequenceAnalysisDef {
 					.field(field -> field
 						.type(new GraphQLList(oBoundMutationPrevalence.get(virusName)))
 						.name("mutationPrevalences")
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.description("Genes to be included in the results")
+						)
 						.description("List of mutation prevalence results."))
 					.field(field -> field
 						.type(new GraphQLList(oBoundSubtype.get(virusName)))
