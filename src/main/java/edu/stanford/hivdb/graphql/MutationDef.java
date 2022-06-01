@@ -32,6 +32,7 @@ import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
 
 import static edu.stanford.hivdb.graphql.GeneDef.oGene;
+import static edu.stanford.hivdb.graphql.DrugClassDef.oDrugClass;
 import static edu.stanford.hivdb.graphql.ConditionalCommentDef.oBoundComment;
 
 public class MutationDef {
@@ -210,6 +211,12 @@ public class MutationDef {
 				.name("isDRM")
 				.description(
 					"If the mutation is a drug resistance mutation (DRM) or not."))
+			.field(field -> field
+				.type(oDrugClass.get(name))
+				.name("DRMDrugClass")
+				.description(
+					"If the mutation is a drug resistance mutation (DRM), which drug class it belongs to."
+				))
 			.field(field -> field
 				.type(GraphQLBoolean)
 				.name("hasStop")
