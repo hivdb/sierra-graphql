@@ -18,10 +18,8 @@
 
 package edu.stanford.hivdb.graphql;
 
-import graphql.execution.DataFetcherResult;
-import graphql.schema.*;
-import static graphql.Scalars.*;
-import graphql.schema.GraphQLFieldDefinition.Builder;
+import static edu.stanford.hivdb.graphql.ExtGraphQL.getPropertyViaMethod;
+import static graphql.Scalars.GraphQLString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,9 +32,13 @@ import edu.stanford.hivdb.sequences.AlignedSequence;
 import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
 import edu.stanford.hivdb.viruses.WithGene;
-
-import static edu.stanford.hivdb.graphql.MutationDef.oMutation;
-import static edu.stanford.hivdb.graphql.ExtGraphQL.*;
+import graphql.execution.DataFetcherResult;
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLEnumType;
+import graphql.schema.GraphQLFieldDefinition.Builder;
+import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLTypeReference;
 
 public class MutationSetDef {
 
@@ -288,7 +290,7 @@ public class MutationSetDef {
 	public static Builder newMutationSet(String virusName, Builder field, String name) {
 		return field
 			.name(name)
-			.type(new GraphQLList(oMutation.get(virusName)))
+			.type(new GraphQLList(new GraphQLTypeReference("Mutation")))
 			.argument(arg -> arg
 				.name("filterOptions")
 				.type(new GraphQLList(oMutationSetFilterOption))
