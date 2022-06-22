@@ -49,6 +49,7 @@ import edu.stanford.hivdb.sequences.Aligner;
 import edu.stanford.hivdb.sequences.Sequence;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Gene;
+import edu.stanford.hivdb.viruses.Strain;
 import edu.stanford.hivdb.viruses.Virus;
 
 import static edu.stanford.hivdb.graphql.ExtGraphQL.ExtPropertyDataFetcher;
@@ -56,6 +57,7 @@ import static edu.stanford.hivdb.graphql.Exceptions.*;
 import static edu.stanford.hivdb.graphql.UnalignedSequenceDef.*;
 import static edu.stanford.hivdb.graphql.StrainDef.*;
 import static edu.stanford.hivdb.graphql.GeneDef.*;
+import static edu.stanford.hivdb.graphql.DrugClassDef.drugClassCodeRegistry;
 import static edu.stanford.hivdb.graphql.MutationDef.*;
 import static edu.stanford.hivdb.graphql.DrugResistanceAlgorithmDef.*;
 import static edu.stanford.hivdb.graphql.SierraVersionDef.*;
@@ -110,7 +112,7 @@ public class SierraSchema {
 			name
 		);
 	}
-	
+
 	private static <VirusT extends Virus<VirusT>> DataFetcher<Triple<Set<Gene<VirusT>>, MutationSet<VirusT>, String>>
 	makeMutationsAnalysisDataFetcher(VirusT virusIns) {
 		return env -> {
@@ -140,8 +142,8 @@ public class SierraSchema {
 
 	private static <VirusT extends Virus<VirusT>> DataFetcher<Collection<Gene<VirusT>>> makeGeneDataFetcher(VirusT virusIns) {
 		return env -> {
-			List<Gene<VirusT>> genes = env.getArgument("names");
-			if (genes == null || genes.isEmpty()) {
+			Collection<String> geneNames = env.getArgument("names");
+			if (geneNames == null || geneNames.isEmpty()) {
 				return (
 					virusIns
 					.getStrains()
@@ -151,7 +153,20 @@ public class SierraSchema {
 				);
 			}
 			else {
-				return genes;
+				Strain<VirusT> mainStrain = virusIns.getMainStrain();
+				return (
+					geneNames
+					.stream()
+					.map(gene -> {
+						try {
+							return virusIns.getGene(gene);
+						}
+						catch (IllegalArgumentException e) {
+							return mainStrain.getGene(gene);
+						}
+					})
+					.collect(Collectors.toList())
+				);
 			}
 		};
 	};
@@ -195,11 +210,11 @@ public class SierraSchema {
 			if (coord != null) {
 				myCodeRegistryBuilder.dataFetcher(coord, new ExtPropertyDataFetcher<>(coord.getFieldName()));
 			}
-			
+
 		}
 		return myCodeRegistryBuilder.dataFetchers(codeRegistry).build();
 	}
-	
+
 	public static SimpleMemoizer<GraphQLObjectType> oRoot = new SimpleMemoizer<>(
 		name -> {
 			Virus<?> virusIns = Virus.getInstance(name);
@@ -269,11 +284,11 @@ public class SierraSchema {
 					.name("mutationPrevalenceSubtypes")
 					.description("List all supported virus subtypes by mutation prevalence.")
 				);
-				
+
 				virusIns.getVirusGraphQLExtension().extendObjectBuilder("Root", builder);
 				return builder;
 			};
-			
+
 			return rootBuilder.get()
 				.name("Root")
 				.field(field -> field
@@ -285,7 +300,7 @@ public class SierraSchema {
 				.build();
 		}
 	);
-	
+
 	private static <VirusT extends Virus<VirusT>> Builder makeRootRegistryBuilder(VirusT virusIns, String rootNodeName) {
 		return newCodeRegistry()
 			.dataFetcher(
@@ -321,9 +336,9 @@ public class SierraSchema {
 				makeMutationPrevalenceSubtypesDataFetcher(virusIns)
 			);
 	}
-	
+
 	private static DataFetcher<Object> viewerDataFetcher = env -> Collections.emptyMap();
- 
+
 	private static <VirusT extends Virus<VirusT>> GraphQLCodeRegistry makeCodeRegistry(VirusT virusIns) {
 		return attachDefaultDataFetcher(
 			oRoot.get(virusIns.getName()),
@@ -333,6 +348,7 @@ public class SierraSchema {
 			.dataFetchers(makeSequenceAnalysisCodeRegistry(virusIns))
 			.dataFetchers(descriptiveStatisticsCodeRegistry)
 			.dataFetchers(geneCodeRegistry)
+			.dataFetchers(drugClassCodeRegistry)
 			.dataFetchers(makeDrugResistanceCodeRegistry(virusIns))
 			.dataFetchers(mutationCodeRegistry)
 			.dataFetchers(makeMutationPrevalenceSubtypeCodeRegistry(virusIns))
@@ -344,7 +360,7 @@ public class SierraSchema {
 			.build()
 		);
 	}
-	
+
 	public static <T extends Virus<T>> GraphQLSchema makeSchema(T virusIns) {
 		if (!schemaSingletons.containsKey(virusIns)) {
 			schemaSingletons.put(

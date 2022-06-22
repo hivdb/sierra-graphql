@@ -47,10 +47,10 @@ public class ExtGraphQL {
 		@SuppressWarnings("unchecked")
 		@Override
 		public T get(DataFetchingEnvironment environment) {
-      Object source = environment.getSource();
-      if (source == null) {
-          return null;
-      }
+			Object source = environment.getSource();
+			if (source == null) {
+				return null;
+				}
 			T result = (T) getPropertyViaMethod(propertyName, source, environment);
 			result = postProcess(result, environment);
 			if (result instanceof Set) {

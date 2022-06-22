@@ -21,13 +21,32 @@ package edu.stanford.hivdb.graphql;
 import graphql.schema.*;
 import static graphql.Scalars.*;
 import static graphql.schema.GraphQLObjectType.newObject;
+import static graphql.schema.GraphQLCodeRegistry.newCodeRegistry;
+import static graphql.schema.FieldCoordinates.coordinates;
 
 import edu.stanford.hivdb.drugs.DrugClass;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Virus;
 
+import static edu.stanford.hivdb.graphql.MutationSetDef.*;
+import static edu.stanford.hivdb.graphql.ExtGraphQL.*;
 
 public class DrugClassDef {
+
+	public static GraphQLCodeRegistry drugClassCodeRegistry = newCodeRegistry()
+		.dataFetcher(
+			coordinates("DrugClass", "hasDrugResistMutations"),
+			new ExtPropertyDataFetcher<String>("hasDrugResistMutations")
+		)
+		.dataFetcher(
+			coordinates("DrugClass", "hasSurveilDrugResistMutations"),
+			new ExtPropertyDataFetcher<String>("hasSurveilDrugResistMutations")
+		)
+		.dataFetcher(
+			coordinates("DrugClass", "hasRxSelectedMutations"),
+			new ExtPropertyDataFetcher<String>("hasRxSelectedMutations")
+		)
+		.build();
 
 	public static SimpleMemoizer<GraphQLEnumType> oDrugClassEnum = new SimpleMemoizer<>(
 		name -> {
@@ -64,6 +83,30 @@ public class DrugClassDef {
 				.type(new GraphQLTypeReference("Gene"))
 				.name("gene")
 				.description("Gene the drug class belongs to."))
+			.field(field -> newMutationSet(name, field, "drugResistMutations")
+				.description("All drug resistance mutations (DRMs) of this drug class."))
+			.field(field -> newMutationSet(name, field, "surveilDrugResistMutations")
+				.description("All surveillance drug resistance mutations (SDRMs) of this drug class."))
+			.field(field -> newMutationSet(name, field, "rxSelectedMutations")
+				.description("All treatment selected mutations (TSMs) of this drug class."))
+			.field(field -> field
+				.type(GraphQLBoolean)
+				.name("hasDrugResistMutations")
+				.description(
+					"Indicate if any mutation is classified as " +
+					"Drug Resistance Mutation (DRM) for this drug class."))
+			.field(field -> field
+				.type(GraphQLBoolean)
+				.name("hasSurveilDrugResistMutations")
+				.description(
+					"Indicate if any mutation is classified as Surveillance " +
+					"Drug Resistance Mutation (SDRM) for this drug class."))
+			.field(field -> field
+				.type(GraphQLBoolean)
+				.name("hasRxSelectedMutations")
+				.description(
+					"Indicate if any mutation is classified as Treatment " +
+					"Selected Mutation (TSM) for this drug class."))
 			.build()
 		)
 	);
