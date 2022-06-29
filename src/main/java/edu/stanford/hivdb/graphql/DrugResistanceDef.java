@@ -31,7 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -44,13 +43,14 @@ import edu.stanford.hivdb.drugs.DrugClass;
 import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
 import edu.stanford.hivdb.mutations.MutationSet;
+import edu.stanford.hivdb.mutations.MutationType;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 
 import static edu.stanford.hivdb.graphql.DrugDef.oDrug;
 import static edu.stanford.hivdb.graphql.DrugClassDef.oDrugClass;
-import static edu.stanford.hivdb.graphql.DrugClassDef.oDrugClassEnum;
+import static edu.stanford.hivdb.graphql.DrugClassDef.enumDrugClass;
 import static edu.stanford.hivdb.graphql.MutationDef.oMutation;
-import static edu.stanford.hivdb.graphql.MutationDef.oMutationType;
+import static edu.stanford.hivdb.graphql.MutationDef.enumMutationType;
 import static edu.stanford.hivdb.graphql.DrugResistanceAlgorithmDef.oDrugResistanceAlgorithm;
 import static edu.stanford.hivdb.graphql.ConditionalCommentDef.oCommentsByType;
 
@@ -123,15 +123,26 @@ public class DrugResistanceDef {
 		return env -> {
 			GeneDR<VirusT> geneDR = env.getSource();
 			Gene<VirusT> gene = geneDR.getGene();
-			return gene.getMutationTypes()
-				.stream()
-				.map(mutType -> {
-					Map<String, Object> result = new TreeMap<>();
+			List<Map<String, Object>> results = new ArrayList<>();
+			for (DrugClass<VirusT> dc : gene.getDrugClasses()) {
+				for (MutationType<VirusT> mutType : dc.getMutationTypes()) {
+					if (mutType.isOther()) {
+						continue;
+					}
+					Map<String, Object> result = new HashMap<>();
 					result.put("mutationType", mutType);
+					result.put("drugClass", dc);
 					result.put("mutations", geneDR.getMutations(mutType));
-					return result;
-				})
-				.collect(Collectors.toList());
+					results.add(result);
+				}
+			}
+			MutationType<VirusT> otherMutType = gene.getOtherMutationType();
+			Map<String, Object> result = new HashMap<>();
+			result.put("mutationType", otherMutType);
+			result.put("drugClass", null);
+			result.put("mutations", geneDR.getMutations(otherMutType));
+			results.add(result);
+			return results;
 		};
 	};
 
@@ -213,7 +224,11 @@ public class DrugResistanceDef {
 			newObject()
 			.name("MutationsByType")
 			.field(field -> field
-				.type(oMutationType.get(name))
+				.type(DrugClassDef.oDrugClass.get(name))
+				.name("drugClass")
+				.description("Drug class of these mutations."))
+			.field(field -> field
+				.type(enumMutationType.get(name))
 				.name("mutationType")
 				.description("Type of these mutations."))
 			.field(field -> field
@@ -264,7 +279,7 @@ public class DrugResistanceDef {
 				.name("drugScores")
 				.description("List of drug levels and scores.")
 				.argument(arg -> arg
-					.type(oDrugClassEnum.get(name))
+					.type(enumDrugClass.get(name))
 					.name("drugClass")
 					.description(
 						"Specify drug class. Leave this argument " +

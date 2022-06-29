@@ -48,7 +48,7 @@ public class DrugClassDef {
 		)
 		.build();
 
-	public static SimpleMemoizer<GraphQLEnumType> oDrugClassEnum = new SimpleMemoizer<>(
+	public static SimpleMemoizer<GraphQLEnumType> enumDrugClass = new SimpleMemoizer<>(
 		name -> {
 			Virus<?> virusIns = Virus.getInstance(name);
 			GraphQLEnumType.Builder
@@ -68,7 +68,7 @@ public class DrugClassDef {
 			.name("DrugClass")
 			.description("Antiviral drug class.")
 			.field(field -> field
-				.type(oDrugClassEnum.get(name))
+				.type(enumDrugClass.get(name))
 				.name("name")
 				.description("Name of the drug class."))
 			.field(field -> field
@@ -89,6 +89,10 @@ public class DrugClassDef {
 				.description("All surveillance drug resistance mutations (SDRMs) of this drug class."))
 			.field(field -> newMutationSet(name, field, "rxSelectedMutations")
 				.description("All treatment selected mutations (TSMs) of this drug class."))
+			.field(field -> field
+				.type(new GraphQLList(new GraphQLTypeReference("MutationType")))
+				.name("mutationTypes")
+				.description("Supported mutation types of current gene."))
 			.field(field -> field
 				.type(GraphQLBoolean)
 				.name("hasDrugResistMutations")

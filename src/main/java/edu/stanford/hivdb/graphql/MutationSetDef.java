@@ -22,11 +22,14 @@ import static edu.stanford.hivdb.graphql.ExtGraphQL.getPropertyViaMethod;
 import static graphql.Scalars.GraphQLString;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Triple;
 
+import edu.stanford.hivdb.drugs.DrugClass;
 import edu.stanford.hivdb.mutations.MutationSet;
+import edu.stanford.hivdb.mutations.MutationType;
 import edu.stanford.hivdb.seqreads.SequenceReads;
 import edu.stanford.hivdb.sequences.AlignedSequence;
 import edu.stanford.hivdb.viruses.Gene;
@@ -41,16 +44,59 @@ import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLTypeReference;
 
 public class MutationSetDef {
-
+	
 	private enum mutsFilterOption {
 		APOBEC, APOBEC_DRM,
-		DRM, notDRM, PI_DRM, NRTI_DRM, NNRTI_DRM, INSTI_DRM,
-		SDRM, notSDRM, PI_SDRM, NRTI_SDRM, NNRTI_SDRM, INSTI_SDRM,
+		DRM, notDRM,
+		SEQUENCED_ONLY,
+		@Deprecated
+		PI_DRM,
+		@Deprecated
+		NRTI_DRM,
+		@Deprecated
+		NNRTI_DRM,
+		@Deprecated
+		INSTI_DRM,
+		SDRM, notSDRM,
+		@Deprecated
+		PI_SDRM,
+		@Deprecated
+		NRTI_SDRM,
+		@Deprecated
+		NNRTI_SDRM,
+		@Deprecated
+		INSTI_SDRM,
 		DRP,
-		TSM, notTSM, PI_TSM, NRTI_TSM, NNRTI_TSM, INSTI_TSM,
-		GENE_PR, GENE_RT, GENE_IN,
-		TYPE_MAJOR, TYPE_ACCESSORY, TYPE_NRTI, TYPE_NNRTI, TYPE_OTHER,
-		INSERTION, DELETION, UNUSUAL, AMBIGUOUS, STOPCODON,
+		TSM, notTSM,
+		@Deprecated
+		PI_TSM,
+		@Deprecated
+		NRTI_TSM,
+		@Deprecated
+		NNRTI_TSM,
+		@Deprecated
+		INSTI_TSM,
+		@Deprecated
+		GENE_PR,
+		@Deprecated
+		GENE_RT,
+		@Deprecated
+		GENE_IN,
+		@Deprecated
+		TYPE_MAJOR,
+		@Deprecated
+		TYPE_ACCESSORY,
+		@Deprecated
+		TYPE_NRTI,
+		@Deprecated
+		TYPE_NNRTI,
+		@Deprecated
+		TYPE_OTHER,
+		INSERTION,
+		DELETION,
+		UNUSUAL,
+		AMBIGUOUS,
+		STOPCODON,
 		CUSTOMLIST
 	};
 
@@ -76,17 +122,24 @@ public class MutationSetDef {
 			"notDRM", mutsFilterOption.notDRM,
 			"List only mutations which are not drug resistance mutation (DRM).")
 		.value(
+			"SEQUENCED_ONLY", mutsFilterOption.SEQUENCED_ONLY,
+			"Remove all unsequenced positions.")
+		.value(
 			"PI_DRM", mutsFilterOption.PI_DRM,
-			"List only mutations which are PI DRM.")
+			"List only mutations which are PI DRM.",
+			"Use combination of `drugClass=PI` and `filterOptions=DRM` instead.")
 		.value(
 			"NRTI_DRM", mutsFilterOption.NRTI_DRM,
-			"List only mutations which are NRTI DRM.")
+			"List only mutations which are NRTI DRM.",
+			"Use combination of `drugClass=NRTI` and `filterOptions=DRM` instead.")
 		.value(
 			"NNRTI_DRM", mutsFilterOption.NNRTI_DRM,
-			"List only mutations which are NNRTI DRM.")
+			"List only mutations which are NNRTI DRM.",
+			"Use combination of `drugClass=NNRTI` and `filterOptions=DRM` instead.")
 		.value(
 			"INSTI_DRM", mutsFilterOption.INSTI_DRM,
-			"List only mutations which are INSTI DRM.")
+			"List only mutations which are INSTI DRM.",
+			"Use combination of `drugClass=INSTI` and `filterOptions=DRM` instead.")
 		.value(
 			"SDRM", mutsFilterOption.SDRM,
 			"List only mutations which are surveillance drug resistance " +
@@ -97,16 +150,20 @@ public class MutationSetDef {
 			"mutation (SDRM).")
 		.value(
 			"PI_SDRM", mutsFilterOption.PI_SDRM,
-			"List only mutations which are PI SDRM.")
+			"List only mutations which are PI SDRM.",
+			"Use combination of `drugClass=PI` and `filterOptions=SDRM` instead.")
 		.value(
 			"NRTI_SDRM", mutsFilterOption.NRTI_SDRM,
-			"List only mutations which are NRTI SDRM.")
+			"List only mutations which are NRTI SDRM.",
+			"Use combination of `drugClass=NRTI` and `filterOptions=SDRM` instead.")
 		.value(
 			"NNRTI_SDRM", mutsFilterOption.NNRTI_SDRM,
-			"List only mutations which are NNRTI SDRM.")
+			"List only mutations which are NNRTI SDRM.",
+			"Use combination of `drugClass=NNRTI` and `filterOptions=SDRM` instead.")
 		.value(
 			"INSTI_SDRM", mutsFilterOption.INSTI_SDRM,
-			"List only mutations which are INSTI SDRM.")
+			"List only mutations which are INSTI SDRM.",
+			"Use combination of `drugClass=INSTI` and `filterOptions=SDRM` instead.")
 		.value(
 			"TSM", mutsFilterOption.TSM,
 			"List only mutations which are treatment-selected mutations (TSM).")
@@ -115,24 +172,36 @@ public class MutationSetDef {
 			"List only mutations which are not treatment-selected mutations (TSM).")
 		.value(
 			"PI_TSM", mutsFilterOption.PI_TSM,
-			"List only mutations which are PI TSM.")
+			"List only mutations which are PI TSM.",
+			"Use combination of `drugClass=PI` and `filterOptions=TSM` instead.")
 		.value(
 			"NRTI_TSM", mutsFilterOption.NRTI_TSM,
-			"List only mutations which are NRTI TSM.")
+			"List only mutations which are NRTI TSM.",
+			"Use combination of `drugClass=NRTI` and `filterOptions=TSM` instead.")
 		.value(
 			"NNRTI_TSM", mutsFilterOption.NNRTI_TSM,
-			"List only mutations which are NNRTI TSM.")
+			"List only mutations which are NNRTI TSM.",
+			"Use combination of `drugClass=NNRTI` and `filterOptions=TSM` instead.")
 		.value(
 			"INSTI_TSM", mutsFilterOption.INSTI_TSM,
-			"List only mutations which are INSTI TSM.")
-		.value("GENE_PR", mutsFilterOption.GENE_PR)
-		.value("GENE_RT", mutsFilterOption.GENE_RT)
-		.value("GENE_IN", mutsFilterOption.GENE_IN)
-		.value("TYPE_MAJOR", mutsFilterOption.TYPE_MAJOR)
-		.value("TYPE_ACCESSORY", mutsFilterOption.TYPE_ACCESSORY)
-		.value("TYPE_NRTI", mutsFilterOption.TYPE_NRTI)
-		.value("TYPE_NNRTI", mutsFilterOption.TYPE_NNRTI)
-		.value("TYPE_OTHER", mutsFilterOption.TYPE_OTHER)
+			"List only mutations which are INSTI TSM.",
+			"Use combination of `drugClass=INSTI` and `filterOptions=TSM` instead.")
+		.value("GENE_PR", mutsFilterOption.GENE_PR,
+			"Use `includeGenes=PR instead.")
+		.value("GENE_RT", mutsFilterOption.GENE_RT,
+			"Use `includeGenes=RT instead.")
+		.value("GENE_IN", mutsFilterOption.GENE_IN,
+			"Use `includeGenes=IN instead.")
+		.value("TYPE_MAJOR", mutsFilterOption.TYPE_MAJOR,
+			"Use `mutationType=Major` instead.")
+		.value("TYPE_ACCESSORY", mutsFilterOption.TYPE_ACCESSORY,
+			"Use `mutationType=Accessory` instead.")
+		.value("TYPE_NRTI", mutsFilterOption.TYPE_NRTI,
+			"Use `mutationType=NRTI` instead.")
+		.value("TYPE_NNRTI", mutsFilterOption.TYPE_NNRTI,
+			"Use `mutationType=NNRTI` instead.")
+		.value("TYPE_OTHER", mutsFilterOption.TYPE_OTHER,
+			"Use `mutationType=Other` instead.")
 		.value("INSERTION", mutsFilterOption.INSERTION)
 		.value("DELETION", mutsFilterOption.DELETION)
 		.value("UNUSUAL", mutsFilterOption.UNUSUAL)
@@ -167,6 +236,10 @@ public class MutationSetDef {
 	
 	final private static <VirusT extends Virus<VirusT>> MutationSet<VirusT> filterMutations(MutationSet<VirusT> mutations, VirusT virusIns, DataFetchingEnvironment env) {
 		List<?> filterOptions = env.getArgument("filterOptions");
+		Collection<String> includeGenes = env.getArgument("includeGenes");
+		String drugClassText = env.getArgument("drugClass");
+		DrugClass<?> drugClass = virusIns.getDrugClass(drugClassText);
+		MutationType<?> mutType = env.getArgument("mutationType");
 		if (filterOptions == null) { filterOptions = new ArrayList<>(); }
 		for (Object filterOption : filterOptions) {
 			switch((mutsFilterOption) filterOption) {
@@ -183,6 +256,9 @@ public class MutationSetDef {
 				mutations = mutations.getAtDRPMutations();
 			case notDRM:
 				mutations = mutations.subtractsBy(mutations.getDRMs());
+				break;
+			case SEQUENCED_ONLY:
+				mutations = mutations.filterBy(mut -> !mut.isUnsequenced());
 				break;
 			case PI_DRM:
 				mutations = mutations.getDRMs(virusIns.getDrugClass("PI"));
@@ -282,7 +358,25 @@ public class MutationSetDef {
 				MutationSet<VirusT> filterSet = virusIns.newMutationSet(gene, customList);
 				mutations = mutations.intersectsWith(filterSet);
 				break;
+			default: break;
 			}
+		}
+		if (includeGenes != null) {
+			mutations = mutations.filterByNoSplit(
+				mut -> includeGenes.contains(mut.getAbstractGene())
+			);
+		}
+		if (drugClass != null) {
+			mutations = mutations.filterBy(
+				mut -> (
+					mut.getDRMDrugClass() == drugClass ||
+					mut.getSDRMDrugClass() == drugClass ||
+					mut.getTSMDrugClass() == drugClass
+				)
+			);
+		}
+		if (mutType != null) {
+			mutations = mutations.filterBy(mut -> mut.getPrimaryType() == mutType);
 		}
 		return mutations;
 	}
@@ -295,6 +389,19 @@ public class MutationSetDef {
 				.name("filterOptions")
 				.type(new GraphQLList(oMutationSetFilterOption))
 				.description("List of filter options for the mutation set."))
+			.argument(arg -> arg
+				.name("includeGenes")
+				.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+				.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+				.description("Specify a gene/genes for filtering the mutation set."))
+			.argument(arg -> arg
+				.name("drugClass")
+				.type(DrugClassDef.enumDrugClass.get(virusName))
+				.description("Specify a drug class for filtering the mutation set."))
+			.argument(arg -> arg
+				.name("mutationType")
+				.type(MutationDef.enumMutationType.get(virusName))
+				.description("Specify a mutation type for filtering the mutation set."))
 			.argument(arg -> arg
 				.name("customList")
 				.type(new GraphQLList(GraphQLString))

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
@@ -39,6 +40,7 @@ import com.google.common.collect.Sets;
 import edu.stanford.hivdb.drugresistance.GeneDR;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
 import edu.stanford.hivdb.genotypes.GenotypeResult;
+import edu.stanford.hivdb.mutations.FrameShift;
 import edu.stanford.hivdb.mutations.MutationSet;
 import edu.stanford.hivdb.sequences.AlignedGeneSeq;
 import edu.stanford.hivdb.sequences.AlignedSequence;
@@ -138,6 +140,18 @@ public class SequenceAnalysisDef {
 		Collection<String> includeGenes = env.getArgument("includeGenes");
 		return getBoundMutationPrevalenceList(mutations, Sets.newHashSet(includeGenes));
 	};
+
+	private static <VirusT extends Virus<VirusT>> DataFetcher<List<FrameShift<VirusT>>> makeFrameShiftsDataFetcher(VirusT virusIns) {
+		return env -> {
+			AlignedSequence<VirusT> alignedSeq = env.getSource();
+			List<FrameShift<VirusT>> fss = alignedSeq.getFrameShifts();
+			Collection<String> includeGenes = env.getArgument("includeGenes");
+			Set<String> includeGeneSet = Sets.newHashSet(includeGenes);
+			return fss.stream()
+				.filter(fs -> includeGeneSet.contains(fs.getAbstractGene()))
+				.collect(Collectors.toList());
+		};
+	};
 	
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeAlgComparisonDataFetcher(VirusT virusIns) {
 		return env -> {
@@ -202,6 +216,10 @@ public class SequenceAnalysisDef {
 			.dataFetcher(
 				coordinates("SequenceAnalysis", "mutations"),
 				newMutationSetDataFetcher(virusIns, "mutations")
+			)
+			.dataFetcher(
+				coordinates("SequenceAnalysis", "frameShifts"),
+				makeFrameShiftsDataFetcher(virusIns)
 			)
 			.dataFetchers(makeAlignedGeneSequenceCodeRegistry(virusIns))
 			.build();
@@ -297,6 +315,7 @@ public class SequenceAnalysisDef {
 							"are counted."))
 					.field(field -> newMutationSet(virusName, field, "mutations")
 						.description("All mutations found in the aligned sequence."))
+
 					.field(field -> field
 						.type(GraphQLInt)
 						.name("mutationCount")
@@ -306,9 +325,44 @@ public class SequenceAnalysisDef {
 						.name("unusualMutationCount")
 						.description("Number of unusual mutations without counting unsequenced regions and multiple continuous deletions"))
 					.field(field -> field
+						.type(GraphQLInt)
+						.name("insertionCount")
+						.description("Number of insertions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("deletionCount")
+						.description("Number of deletions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("stopCodonCount")
+						.description("Number of positions with stop codons without counting unsequenced regions and multiple continuous deletions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("ambiguousMutationCount")
+						.description("Number of ambiguous positions without counting unsequenced regions and multiple continuous deletions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("apobecMutationCount")
+						.description("Number of APOBEC mutations without counting unsequenced regions and multiple continuous deletions"))
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("apobecDRMCount")
+						.description("Number of APOBEC DRMs without counting unsequenced regions and multiple continuous deletions"))
+					
+					.field(field -> field
+						.type(GraphQLInt)
+						.name("frameShiftCount")
+						.description("Number of frame shifts"))
+					.field(field -> field
 						.type(new GraphQLList(oFrameShift.get(virusName)))
 						.name("frameShifts")
-						.description("All frame shifts found in the aligned sequence."))
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.description("Genes to be included in the results")
+						)
+						.description("List of all frame shifts"))
 					.field(field -> field
 						.type(new GraphQLList(oDrugResistance.get(virusName)))
 						.name("drugResistance")

@@ -59,7 +59,7 @@ public class MutationDef {
 		return isUnsequenced(env);
 	};
 
-	public static SimpleMemoizer<GraphQLEnumType> oMutationType = new SimpleMemoizer<>(
+	public static SimpleMemoizer<GraphQLEnumType> enumMutationType = new SimpleMemoizer<>(
 		name -> {
 			Virus<?> virusIns = Virus.getInstance(name);
 			GraphQLEnumType.Builder mutationTypeBuilder = GraphQLEnumType.newEnum()
@@ -233,13 +233,25 @@ public class MutationDef {
 				.description(
 					"The mutation is a Surveillance Drug Resistance Mutation (SDRM) or not."))
 			.field(field -> field
-				.type(new GraphQLList(oMutationType.get(name)))
+				.type(oDrugClass.get(name))
+				.name("SDRMDrugClass")
+				.description(
+					"If the mutation is an SDRM, which drug class it belongs to."
+				))
+			.field(field -> field
+				.type(oDrugClass.get(name))
+				.name("TSMDrugClass")
+				.description(
+					"If the mutation is a TSM, which drug class it belongs to."
+				))
+			.field(field -> field
+				.type(new GraphQLList(enumMutationType.get(name)))
 				.name("types")
 				.description(
 					"Ordered list of mutation type(s). List size can be " +
 					"larger than 1 when the mutation is a mixture."))
 			.field(field -> field
-				.type(oMutationType.get(name))
+				.type(enumMutationType.get(name))
 				.name("primaryType")
 				.description("Primary type of the mutation."))
 			.field(field -> field
