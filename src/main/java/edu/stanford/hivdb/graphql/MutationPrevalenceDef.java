@@ -105,8 +105,8 @@ public class MutationPrevalenceDef {
 					Integer[] stat = e.getValue().get(subtype);
 					Map<String, Object> r = new HashMap<>();
 					r.put("gene", gene);
-					r.put("totalNaive", stat[0]);
-					r.put("totalTreated", stat[1]);
+					r.put("totalNaive", stat == null ? 0 : stat[0]);
+					r.put("totalTreated", stat == null ? 0 : stat[1]);
 					return r;
 				})
 				.collect(Collectors.toList());
