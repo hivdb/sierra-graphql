@@ -62,6 +62,7 @@ public class DrugResistanceDef {
 		.value("S", SIREnum.S, "Susceptible level.")
 		.value("I", SIREnum.I, "Intermediate level.")
 		.value("R", SIREnum.R, "Resistance level.")
+		.value("U", SIREnum.U, "Unknown level.")
 		.build();
 
 	private static <VirusT extends Virus<VirusT>> DataFetcher<List<Map<String, Object>>> makeDrugScoresDataFetcher(VirusT virusIns) {

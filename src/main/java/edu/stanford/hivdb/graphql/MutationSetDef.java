@@ -44,7 +44,7 @@ import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLTypeReference;
 
 public class MutationSetDef {
-	
+
 	private enum mutsFilterOption {
 		APOBEC, APOBEC_DRM,
 		DRM, notDRM,
@@ -232,8 +232,8 @@ public class MutationSetDef {
 			);
 		};
 	}
-	
-	
+
+
 	final private static <VirusT extends Virus<VirusT>> MutationSet<VirusT> filterMutations(MutationSet<VirusT> mutations, VirusT virusIns, DataFetchingEnvironment env) {
 		List<?> filterOptions = env.getArgument("filterOptions");
 		Collection<String> includeGenes = env.getArgument("includeGenes");
@@ -381,20 +381,24 @@ public class MutationSetDef {
 		return mutations;
 	}
 
-	public static Builder newMutationSet(String virusName, Builder field, String name) {
-		return field
+	public static Builder newMutationSet(String virusName, Builder field, String name, boolean enableIncludedGenes) {
+		Builder builder = field
 			.name(name)
 			.type(new GraphQLList(new GraphQLTypeReference("Mutation")))
 			.argument(arg -> arg
 				.name("filterOptions")
 				.type(new GraphQLList(oMutationSetFilterOption))
-				.description("List of filter options for the mutation set."))
-			.argument(arg -> arg
+				.description("List of filter options for the mutation set."));
+
+		if (enableIncludedGenes) {
+			builder = builder.argument(arg -> arg
 				.name("includeGenes")
 				.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
-				.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
-				.description("Specify a gene/genes for filtering the mutation set."))
-			.argument(arg -> arg
+				.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
+				.description("Specify a gene/genes for filtering the mutation set."));
+		}
+
+		return builder.argument(arg -> arg
 				.name("drugClass")
 				.type(DrugClassDef.enumDrugClass.get(virusName))
 				.description("Specify a drug class for filtering the mutation set."))
@@ -415,7 +419,7 @@ public class MutationSetDef {
 	public static <VirusT extends Virus<VirusT>> MutationSet<VirusT> getMutationSetFromSource(Object src) {
 		MutationSet<?> mutations;
 		if (src instanceof AlignedSequence) {
-			mutations = ((AlignedSequence<?>) src).getMutations(); 
+			mutations = ((AlignedSequence<?>) src).getMutations();
 		}
 		else if (src instanceof SequenceReads) {
 			mutations = ((SequenceReads<?>) src).getMutations();
@@ -436,5 +440,5 @@ public class MutationSetDef {
 		MutationSet<VirusT> virusMutations = (MutationSet<VirusT>) mutations;
 		return virusMutations;
 	}
-	
+
 }

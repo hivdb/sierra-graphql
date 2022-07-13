@@ -251,7 +251,7 @@ public class SequenceAnalysisDef {
 						.argument(arg -> arg
 							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 							.description("Genes to be included in the results")
 						)
 						.description("Validation results for this sequence."))
@@ -261,7 +261,7 @@ public class SequenceAnalysisDef {
 						.argument(arg -> arg
 							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 							.description("Genes to be included in the results")
 						)
 						.description("List of aligned sequence distinguished by genes."))
@@ -313,7 +313,7 @@ public class SequenceAnalysisDef {
 						.description(
 							"Mixture rate of the sequence. Notes only RYMWKS " +
 							"are counted."))
-					.field(field -> newMutationSet(virusName, field, "mutations")
+					.field(field -> newMutationSet(virusName, field, "mutations", /* enableIncludedGenes= */true)
 						.description("All mutations found in the aligned sequence."))
 
 					.field(field -> field
@@ -359,7 +359,7 @@ public class SequenceAnalysisDef {
 						.argument(arg -> arg
 							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 							.description("Genes to be included in the results")
 						)
 						.description("List of all frame shifts"))
@@ -375,7 +375,7 @@ public class SequenceAnalysisDef {
 						.argument(arg -> arg
 							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 							.description("Genes to be included in the results")
 						)
 						.description("List of drug resistance results by genes."))
@@ -385,7 +385,7 @@ public class SequenceAnalysisDef {
 						.argument(arg -> arg
 							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 							.description("Genes to be included in the results")
 						)
 						.description("List of mutation prevalence results."))

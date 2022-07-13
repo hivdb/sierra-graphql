@@ -148,7 +148,7 @@ public class GeneSequenceReadsDef {
 					"Mixtures are represented as \"X\"."
 				)
 			)
-			.field(field -> newMutationSet(virusName, field, "mutations")
+			.field(field -> newMutationSet(virusName, field, "mutations", /* enableIncludedGenes= */false)
 				.description("All mutations found in the aligned sequence.")
 			)
 			.field(field -> field

@@ -188,7 +188,7 @@ public class MutationsAnalysisDef {
 				.name("gene")
 				.description("Gene of the mutation set.")
 			)
-			.field(field -> newMutationSet(virusName, field, "mutations")
+			.field(field -> newMutationSet(virusName, field, "mutations", /* enableIncludedGenes= */true)
 				.description("All mutations of this gene.")
 			)
 			.build()
@@ -208,7 +208,7 @@ public class MutationsAnalysisDef {
 				.argument(arg -> arg
 					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("Validation results for the mutation list."))
@@ -218,7 +218,7 @@ public class MutationsAnalysisDef {
 				.argument(arg -> arg
 					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("Mutations groupped by gene."))
@@ -233,7 +233,7 @@ public class MutationsAnalysisDef {
 				.argument(arg -> arg
 					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("List of drug resistance results by genes."))
@@ -243,7 +243,7 @@ public class MutationsAnalysisDef {
 				.argument(arg -> arg
 					.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(virusName).getAbstractGenes())
+					.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("List of mutation prevalence results."))

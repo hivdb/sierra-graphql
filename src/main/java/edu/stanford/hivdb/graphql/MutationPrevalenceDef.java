@@ -164,7 +164,7 @@ public class MutationPrevalenceDef {
 				.argument(arg -> arg
 					.type(new GraphQLList(GeneDef.enumGene.get(name)))
 					.name("includeGenes")
-					.defaultValue(Virus.getInstance(name).getAbstractGenes())
+					.defaultValue(Virus.getInstance(name).getDefaultIncludedGenes())
 					.description("Genes to be included in the results")
 				)
 				.description("Sbutype statistics by genes."))
