@@ -22,6 +22,7 @@ import graphql.schema.*;
 import static graphql.Scalars.*;
 import static graphql.schema.GraphQLObjectType.newObject;
 
+import edu.stanford.hivdb.sequences.AlignedGeneSeq;
 import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Virus;
 
@@ -44,9 +45,37 @@ public class AlignedGeneSequenceDef {
 				coordinates("AlignedGeneSequence", "mutations"),
 				newMutationSetDataFetcher(virusIns, "mutations")
 			)
+			.dataFetcher(
+				coordinates("AlignedGeneSequence", "adjustedAlignedAAs"),
+				adjustedAlignedAAsFetcher
+			)
+			.dataFetcher(
+				coordinates("AlignedGeneSequence", "adjustedAlignedNAs"),
+				adjustedAlignedNAsFetcher
+			)
 			.build()
 		);
 	}
+	
+	public static DataFetcher<String> adjustedAlignedAAsFetcher = env -> {
+		AlignedGeneSeq<?> seq = env.getSource();
+		String strain = env.getArgument("targetStrain");
+		if (strain == null) {
+			return seq.getAdjustedAlignedAAs();
+		} else {
+			return seq.getAdjustedAlignedAAs(strain);
+		}
+	};
+
+	public static DataFetcher<String> adjustedAlignedNAsFetcher = env -> {
+		AlignedGeneSeq<?> seq = env.getSource();
+		String strain = env.getArgument("targetStrain");
+		if (strain == null) {
+			return seq.getAdjustedAlignedNAs();
+		} else {
+			return seq.getAdjustedAlignedNAs(strain);
+		}
+	};
 
 	public static SimpleMemoizer<GraphQLObjectType> oAlignedGeneSequence = new SimpleMemoizer<>(
 		virusName -> (
@@ -119,14 +148,24 @@ public class AlignedGeneSequenceDef {
 			.field(field -> field
 				.type(GraphQLString)
 				.name("adjustedAlignedNAs")
-				.description("(HXB2 numbering) adjusted aligned DNA sequence without insertions and insertion gaps.")
+				.description("adjusted aligned DNA sequence without insertions and insertion gaps.")
+				.argument(arg -> arg
+					.name("targetStrain")
+					.type(GraphQLString)
+					.description("Sequences alignment target strain.")
+				)
 			)
 			.field(field -> field
 				.type(GraphQLString)
 				.name("adjustedAlignedAAs")
 				.description(
-					"(HXB2 numbering) adjusted aligned protein sequence without insertions and insertion gaps. " +
+					"adjusted aligned protein sequence without insertions and insertion gaps. " +
 					"Mixtures are represented as \"X\"."
+				)
+				.argument(arg -> arg
+					.name("targetStrain")
+					.type(GraphQLString)
+					.description("Sequences alignment target strain.")
 				)
 			)
 			.field(field -> newMutationSet(virusName, field, "mutations", /* enableIncludedGenes= */false)
