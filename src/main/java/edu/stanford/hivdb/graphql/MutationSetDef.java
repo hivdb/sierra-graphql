@@ -260,7 +260,7 @@ public class MutationSetDef {
 				break;
 			case SEQUENCED_ONLY:
 				Object src = env.getLocalContext();
-				mutations = mutations.filterBy(mut -> {
+				mutations = mutations.filterByNoSplit(mut -> {
 					GeneRegions<VirusT> unseqRegions = UnsequencedRegionsDef.getUnsequencedRegionsFromSource(src, mut.getGene());
 					return !mut.isUnsequenced(unseqRegions);
 				});
@@ -381,7 +381,7 @@ public class MutationSetDef {
 			);
 		}
 		if (mutType != null) {
-			mutations = mutations.filterBy(mut -> mut.getPrimaryType() == mutType);
+			mutations = mutations.filterByNoSplit(mut -> mut.getPrimaryType() == mutType);
 		}
 		return mutations;
 	}
