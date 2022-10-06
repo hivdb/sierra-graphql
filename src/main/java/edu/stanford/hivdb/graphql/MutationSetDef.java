@@ -32,6 +32,7 @@ import edu.stanford.hivdb.mutations.MutationSet;
 import edu.stanford.hivdb.mutations.MutationType;
 import edu.stanford.hivdb.seqreads.SequenceReads;
 import edu.stanford.hivdb.sequences.AlignedSequence;
+import edu.stanford.hivdb.sequences.GeneRegions;
 import edu.stanford.hivdb.viruses.Gene;
 import edu.stanford.hivdb.viruses.Virus;
 import edu.stanford.hivdb.viruses.WithGene;
@@ -258,7 +259,11 @@ public class MutationSetDef {
 				mutations = mutations.subtractsBy(mutations.getDRMs());
 				break;
 			case SEQUENCED_ONLY:
-				mutations = mutations.filterBy(mut -> !mut.isUnsequenced());
+				Object src = env.getLocalContext();
+				mutations = mutations.filterBy(mut -> {
+					GeneRegions<VirusT> unseqRegions = UnsequencedRegionsDef.getUnsequencedRegionsFromSource(src, mut.getGene());
+					return !mut.isUnsequenced(unseqRegions);
+				});
 				break;
 			case PI_DRM:
 				mutations = mutations.getDRMs(virusIns.getDrugClass("PI"));

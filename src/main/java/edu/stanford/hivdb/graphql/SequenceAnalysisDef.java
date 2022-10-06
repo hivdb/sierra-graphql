@@ -175,7 +175,7 @@ public class SequenceAnalysisDef {
 					LinkedHashMap::new
 				));
 			AlignedSequence<VirusT> alignedSeq = env.getSource();
-			return fetchAlgorithmComparisonData(virusIns, alignedSeq.getMutations(), asiAlgs, customAlgs2);
+			return fetchAlgorithmComparisonData(virusIns, alignedSeq.getSequencedMutations(), asiAlgs, customAlgs2);
 		};
 	};
 			
