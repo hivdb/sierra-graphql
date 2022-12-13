@@ -19,6 +19,8 @@
 package edu.stanford.hivdb.graphql;
 
 import graphql.schema.*;
+import graphql.schema.GraphQLCodeRegistry.Builder;
+
 import static graphql.Scalars.*;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLObjectType.newObject;
@@ -38,6 +40,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import edu.stanford.hivdb.drugresistance.GeneDR;
+import edu.stanford.hivdb.drugresistance.algorithm.DrugResistanceAlgorithm;
 import edu.stanford.hivdb.genotypes.BoundGenotype;
 import edu.stanford.hivdb.genotypes.GenotypeResult;
 import edu.stanford.hivdb.mutations.FrameShift;
@@ -180,7 +183,8 @@ public class SequenceAnalysisDef {
 	};
 			
 	public static <VirusT extends Virus<VirusT>> GraphQLCodeRegistry makeSequenceAnalysisCodeRegistry(VirusT virusIns) {
-		return newCodeRegistry()
+		DrugResistanceAlgorithm<?> defaultDRAlgo = virusIns.getDefaultDrugResistAlgorithm();
+		Builder builder = newCodeRegistry()
 			.dataFetcher(
 				coordinates("SequenceAnalysis", "subtypes"),
 				makeSubtypesDataFetcher(virusIns)
@@ -202,16 +206,8 @@ public class SequenceAnalysisDef {
 				makeAlignedGeneSequencesDataFetcher(virusIns)
 			)
 			.dataFetcher(
-				coordinates("SequenceAnalysis", "drugResistance"),
-				makeDrugResistanceDataFetcher(virusIns)
-			)
-			.dataFetcher(
 				coordinates("SequenceAnalysis", "mutationPrevalences"),
 				boundMutPrevListDataFetcher
-			)
-			.dataFetcher(
-				coordinates("SequenceAnalysis", "algorithmComparison"),
-				makeAlgComparisonDataFetcher(virusIns)
 			)
 			.dataFetcher(
 				coordinates("SequenceAnalysis", "mutations"),
@@ -221,8 +217,19 @@ public class SequenceAnalysisDef {
 				coordinates("SequenceAnalysis", "frameShifts"),
 				makeFrameShiftsDataFetcher(virusIns)
 			)
-			.dataFetchers(makeAlignedGeneSequenceCodeRegistry(virusIns))
-			.build();
+			.dataFetchers(makeAlignedGeneSequenceCodeRegistry(virusIns));
+		if (defaultDRAlgo != null) {
+			builder = builder
+				.dataFetcher(
+					coordinates("SequenceAnalysis", "drugResistance"),
+					makeDrugResistanceDataFetcher(virusIns)
+				)
+				.dataFetcher(
+					coordinates("SequenceAnalysis", "algorithmComparison"),
+					makeAlgComparisonDataFetcher(virusIns)
+				);
+		}
+		return builder.build();
 	}
 
 	public static SimpleMemoizer<GraphQLObjectType> oSequenceAnalysis = new SimpleMemoizer<>(
@@ -364,22 +371,6 @@ public class SequenceAnalysisDef {
 						)
 						.description("List of all frame shifts"))
 					.field(field -> field
-						.type(new GraphQLList(oDrugResistance.get(virusName)))
-						.name("drugResistance")
-						.argument(arg -> arg
-							.name("algorithm")
-							.type(oASIAlgorithm.get(virusName))
-							.defaultValue(Virus.getInstance(virusName).getDefaultDrugResistAlgorithm().getName())
-							.description("One of the built-in ASI algorithms.")
-						)
-						.argument(arg -> arg
-							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
-							.name("includeGenes")
-							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
-							.description("Genes to be included in the results")
-						)
-						.description("List of drug resistance results by genes."))
-					.field(field -> field
 						.type(new GraphQLList(oBoundMutationPrevalence.get(virusName)))
 						.name("mutationPrevalences")
 						.argument(arg -> arg
@@ -408,14 +399,34 @@ public class SequenceAnalysisDef {
 						.name("subtypeText")
 						.deprecate("Use field `bestMatchingSubtype { display }` instead.")
 						.description(
-							"Formatted text for best matching subtype."))
+							"Formatted text for best matching subtype."));
+			Virus<?> virusIns = Virus.getInstance(virusName);
+			DrugResistanceAlgorithm<?> defaultDRAlgo = virusIns.getDefaultDrugResistAlgorithm();
+			if (defaultDRAlgo != null) {
+				builder = builder
+					.field(field -> field
+						.type(new GraphQLList(oDrugResistance.get(virusName)))
+						.name("drugResistance")
+						.argument(arg -> arg
+							.name("algorithm")
+							.type(oASIAlgorithm.get(virusName))
+							.defaultValue(defaultDRAlgo.getName())
+							.description("One of the built-in ASI algorithms.")
+						)
+						.argument(arg -> arg
+							.type(new GraphQLList(GeneDef.enumGene.get(virusName)))
+							.name("includeGenes")
+							.defaultValue(Virus.getInstance(virusName).getDefaultIncludedGenes())
+							.description("Genes to be included in the results")
+						)
+						.description("List of drug resistance results by genes."))
 					.field(field -> field
 						.type(new GraphQLList(oAlgorithmComparison.get(virusName)))
 						.name("algorithmComparison")
 						.description("List of ASI comparison results.")
 						.argument(aASIAlgorithmArgument.get(virusName))
 						.argument(aASICustomAlgorithmArgument));
-			Virus<?> virusIns = Virus.getInstance(virusName);
+			}
 			builder = virusIns.getVirusGraphQLExtension().extendObjectBuilder("SequenceAnalysis", builder);
 			return builder.build();
 		}

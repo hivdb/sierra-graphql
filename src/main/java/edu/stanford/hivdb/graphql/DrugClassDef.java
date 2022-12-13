@@ -29,6 +29,7 @@ import edu.stanford.hivdb.utilities.SimpleMemoizer;
 import edu.stanford.hivdb.viruses.Virus;
 
 import static edu.stanford.hivdb.graphql.MutationSetDef.*;
+import static edu.stanford.hivdb.graphql.DrugDef.oDrug;
 import static edu.stanford.hivdb.graphql.ExtGraphQL.*;
 
 public class DrugClassDef {
@@ -76,7 +77,7 @@ public class DrugClassDef {
 				.name("fullName")
 				.description("Full name of the drug class."))
 			.field(field -> field
-				.type(new GraphQLList(new GraphQLTypeReference("Drug")))
+				.type(new GraphQLList(oDrug.get(name)))
 				.name("drugs")
 				.description("Drugs of this drug class."))
 			.field(field -> field
